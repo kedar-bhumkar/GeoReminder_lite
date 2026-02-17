@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-expo-app@latest:*)",
+      "Bash(npm init -y)",
+      "Bash(npm install:*)",
+      "Bash(node scripts/generate-assets.js:*)",
+      "Bash(npx expo start:*)",
+      "Skill(claudeception)",
+      "Bash(npx expo install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx expo export:*)"
+    ]
+  }
+}
