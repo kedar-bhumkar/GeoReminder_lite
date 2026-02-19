@@ -27,7 +27,10 @@ import {
   stopBackgroundLocationTracking,
   getBackgroundLocationPermissionStatus,
   requestBackgroundLocationPermission,
+  syncBackgroundTaskData,
+  sendTestNotification,
 } from '../services/backgroundLocationTask';
+import { getPlacesApiKey } from '../services/placesConfig';
 
 export interface LocationContextType {
   // State
@@ -106,8 +109,25 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
       // Auto-start background tracking if enabled and permission granted
       if (loadedSettings.backgroundEnabled && bgStatus === 'granted') {
-        const started = await startBackgroundLocationTracking();
-        setIsBackgroundTracking(started);
+        // Sync data before starting background tracking
+        const placesApiKey = getPlacesApiKey();
+        console.log('Auto-start background tracking - API key available:', !!placesApiKey);
+
+        if (placesApiKey) {
+          // Note: reminders will be empty on first mount, useEffect below will sync them once loaded
+          const remindersForBackground = reminders.map(r => ({
+            id: r.id,
+            text: r.text,
+            entity: r.entity,
+            is_active: r.is_active,
+          }));
+          await syncBackgroundTaskData(remindersForBackground, placesApiKey, loadedSettings.radiusMeters);
+
+          const started = await startBackgroundLocationTracking();
+          setIsBackgroundTracking(started);
+        } else {
+          console.warn('Cannot auto-start background tracking: No Places API key');
+        }
       }
     };
     init();
@@ -123,6 +143,21 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
     return () => subscription.remove();
   }, []);
+
+  // Sync reminders and API key to AsyncStorage for background task whenever reminders change
+  useEffect(() => {
+    if (isBackgroundTracking) {
+      const remindersForBackground = reminders.map(r => ({
+        id: r.id,
+        text: r.text,
+        entity: r.entity,
+        is_active: r.is_active,
+      }));
+      const placesApiKey = getPlacesApiKey();
+      // Always sync to ensure background task has latest data
+      syncBackgroundTaskData(remindersForBackground, placesApiKey, settings.radiusMeters);
+    }
+  }, [reminders, isBackgroundTracking, settings.radiusMeters]);
 
   // Location check function
   const performLocationCheck = useCallback(async () => {
@@ -328,6 +363,29 @@ export function LocationProvider({ children }: LocationProviderProps) {
       return false;
     }
 
+    // Get the Places API key
+    const placesApiKey = getPlacesApiKey();
+    console.log('Starting background tracking - API key available:', !!placesApiKey);
+
+    if (!placesApiKey) {
+      setError('Google Places API key not configured. Please set it in Settings.');
+      return false;
+    }
+
+    // Prepare reminders for background task
+    const remindersForBackground = reminders.map(r => ({
+      id: r.id,
+      text: r.text,
+      entity: r.entity,
+      is_active: r.is_active,
+    }));
+
+    const activeReminders = remindersForBackground.filter(r => r.is_active && r.entity);
+    console.log('Background tracking - total reminders:', remindersForBackground.length, 'active with entities:', activeReminders.length);
+
+    // Sync data to AsyncStorage for background task to access
+    await syncBackgroundTaskData(remindersForBackground, placesApiKey, settings.radiusMeters);
+
     const started = await startBackgroundLocationTracking();
     if (started) {
       setIsBackgroundTracking(true);
@@ -335,12 +393,16 @@ export function LocationProvider({ children }: LocationProviderProps) {
       await saveLocationSettings(newSettings);
       setSettings(newSettings);
       setError(null);
+
+      // Send a test notification to verify notifications work
+      await sendTestNotification();
+
       return true;
     } else {
       setError('Failed to start background tracking');
       return false;
     }
-  }, [settings]);
+  }, [settings, reminders]);
 
   // Stop background location tracking
   const handleStopBackgroundTracking = useCallback(async (): Promise<void> => {

@@ -120,3 +120,10 @@ export async function usePredefinedPlacesKey(): Promise<void> {
 export function hasPlacesApiKey(): boolean {
   return !!getPlacesApiKey();
 }
+
+// Get the effective API key for background tasks (stored in AsyncStorage)
+// This ensures background tasks can access the key even if using predefined
+export async function getEffectivePlacesApiKeyForBackground(): Promise<string | null> {
+  const key = getPlacesApiKey();
+  return key;
+}
