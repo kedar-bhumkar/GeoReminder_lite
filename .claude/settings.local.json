@@ -9,7 +9,19 @@
       "Skill(claudeception)",
       "Bash(npx expo install:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx expo export:*)"
+      "Bash(npx expo export:*)",
+      "Bash(file:*)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File fix-pngs.ps1)",
+      "Bash(node fix-pngs.js:*)",
+      "Bash(node check-headers.js:*)",
+      "Bash(node:*)",
+      "Bash(del fix-pngs.ps1 fix-pngs.js check-headers.js create-placeholders.js)",
+      "Bash(npm uninstall:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
     ]
   }
 }
